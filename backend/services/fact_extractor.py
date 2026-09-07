@@ -82,6 +82,7 @@ def _chunk_text(text: str, max_chars: int = 4000) -> list[str]:
     Llama 3.3 70B on Groq has a ~128k token context, but we chunk at
     ~24k characters (~6k tokens) to leave room for the system prompt
     and response, and to stay within rate limits on the free tier.
+    Old data, groq can't handle more than 8000 per chunk here and its going nuts dude - changed it to 4000(chunk size) and 2000 tokens per chunk
 
     Splits on page boundaries (--- PAGE N ---) to preserve context.
     """
@@ -147,7 +148,7 @@ def extract_facts(document_text: str, filename: str) -> list[FactExtraction]:
                 ],
                 temperature=0.1,  # Low temperature for precise extraction
                 response_format={"type": "json_object"},
-                max_tokens=2000,
+                max_tokens=2000, # Old data, groq can't handle more than 8000 per chunk here and its going nuts dude - changed it to 4000(chunk size) and 2000 tokens per chunk
             )
         except Exception as e:
             logger.error("Groq API error during fact extraction (chunk %d): %s", i + 1, e)
