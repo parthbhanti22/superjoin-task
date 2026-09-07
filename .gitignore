@@ -1,0 +1,37 @@
+# Fact Knowledge Layer — .gitignore
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Environment variables (secrets)
+.env
+backend/.env
+
+# Database
+*.db
+
+# Uploads (user data)
+backend/uploads/
+
+# Node
+node_modules/
+.next/
+
+# LLM handoff (tracked separately)
+llm_handoff_context.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
