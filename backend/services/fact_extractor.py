@@ -9,9 +9,9 @@ for structured output.
 """
 
 import json
-from typing import Generator
 import logging
 import time
+from typing import Generator
 
 from groq import Groq
 
@@ -78,13 +78,9 @@ You MUST respond with ONLY a valid JSON object (no markdown, no explanation) mat
 
 def _chunk_text(text: str, max_chars: int = 4000) -> list[str]:
     """
-    Split document text into chunks that fit within Groq's context window.
+    Split document text into chunks that fit within Groq's free-tier limits.
 
-    Llama 3.3 70B on Groq has a ~128k token context, but we chunk at
-    ~24k characters (~6k tokens) to leave room for the system prompt
-    and response, and to stay within rate limits on the free tier.
-    Old data, groq can't handle more than 8000 per chunk here and its going nuts dude - changed it to 4000(chunk size) and 2000 tokens per chunk
-
+    Uses 4000 chars per chunk (~1000 tokens) to stay well within rate limits.
     Splits on page boundaries (--- PAGE N ---) to preserve context.
     """
     if len(text) <= max_chars:
@@ -108,19 +104,21 @@ def _chunk_text(text: str, max_chars: int = 4000) -> list[str]:
     return chunks if chunks else [text]
 
 
-def extract_facts(document_text: str, filename: str) -> Generator[list[FactExtraction], None, None]:
+def extract_facts(
+    document_text: str, filename: str
+) -> Generator[list[FactExtraction], None, None]:
     """
     Extract structured facts from document text using Groq.
+
+    This is a generator — it yields a batch of facts after each chunk
+    so the caller can commit them to the DB incrementally.
 
     Args:
         document_text: The full text of the document with page markers.
         filename: Original filename for context.
 
-    Returns:
-        List of validated FactExtraction objects.
-
-    Raises:
-        RuntimeError: If the API call fails or response is unparseable.
+    Yields:
+        List of FactExtraction objects for each successfully processed chunk.
     """
     client = _get_client()
     chunks = _chunk_text(document_text)
@@ -145,13 +143,14 @@ def extract_facts(document_text: str, filename: str) -> Generator[list[FactExtra
                     {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
                 ],
-                temperature=0.1,  # Low temperature for precise extraction
+                temperature=0.1,
                 response_format={"type": "json_object"},
-                max_tokens=2000, # Old data, groq can't handle more than 8000 per chunk here and its going nuts dude - changed it to 4000(chunk size) and 2000 tokens per chunk
+                max_tokens=2000,
             )
         except Exception as e:
-            logger.error("Groq API error during fact extraction (chunk %d): %s", i + 1, e)
-            continue  # Skip this chunk and move to the next to avoid crashing the whole document
+            logger.error("Groq API error on chunk %d: %s", i + 1, e)
+            # Skip this chunk, continue with the rest
+            continue
 
         # Parse the structured response
         raw_text = response.choices[0].message.content
@@ -159,23 +158,20 @@ def extract_facts(document_text: str, filename: str) -> Generator[list[FactExtra
             logger.warning("Empty response from Groq for chunk %d", i + 1)
             continue
 
-
-
         try:
             raw = json.loads(raw_text)
             result = FactExtractionResponse(**raw)
-            yield result.facts
             logger.info(
                 "Extracted %d facts from chunk %d of '%s'",
                 len(result.facts), i + 1, filename,
             )
+            yield result.facts
         except (json.JSONDecodeError, ValueError) as e:
             logger.error("Failed to parse Groq response (chunk %d): %s", i + 1, e)
             logger.debug("Raw response: %s", raw_text[:500])
-            # Continue with other chunks instead of failing entirely
             continue
 
+        # Rate-limit pause between chunks (Groq free tier)
         if i < len(chunks) - 1:
-            logger.info("Pausing for 60 seconds to respect Groq rate limits...")
+            logger.info("Pausing 60s for Groq rate limits...")
             time.sleep(60)
-

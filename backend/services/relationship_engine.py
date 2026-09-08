@@ -98,9 +98,12 @@ def analyze_relationships(
 
     # Build the fact listing for the prompt
     fact_sections = []
+    MAX_FACTS_PER_DOC = 20
     for filename, facts in facts_by_document.items():
         lines = [f"\n=== DOCUMENT: {filename} ==="]
-        for f in facts:
+        # Sort facts by confidence (highest first) and take the top N
+        top_facts = sorted(facts, key=lambda x: x.get('confidence', 0), reverse=True)[:MAX_FACTS_PER_DOC]
+        for f in top_facts:
             lines.append(
                 f"  [ID: {f['id']}]\n"
                 f"  Claim: {f['claim']}\n"
@@ -123,7 +126,7 @@ def analyze_relationships(
     logger.info(
         "Sending relationship analysis request to Groq (%d documents, %d total facts)",
         len(facts_by_document),
-        sum(len(f) for f in facts_by_document.values()),
+        sum(min(len(f), MAX_FACTS_PER_DOC) for f in facts_by_document.values()),
     )
 
     try:
