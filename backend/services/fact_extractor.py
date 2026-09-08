@@ -9,6 +9,7 @@ for structured output.
 """
 
 import json
+from typing import Generator
 import logging
 import time
 
@@ -56,7 +57,7 @@ RULES:
    - Below 0.7: Fact is uncertain or the source text is ambiguous
 8. Focus on the MOST IMPORTANT facts — key metrics, financial figures, dates, percentages, and named entities.
 9. Do NOT extract duplicate facts from the same document.
-10. Extract 15-40 facts per document depending on content density.
+10. Extract ONLY 2-5 of the most important facts per chunk. DO NOT exceed 5 facts.
 
 You MUST respond with ONLY a valid JSON object (no markdown, no explanation) matching this schema:
 {
@@ -107,7 +108,7 @@ def _chunk_text(text: str, max_chars: int = 4000) -> list[str]:
     return chunks if chunks else [text]
 
 
-def extract_facts(document_text: str, filename: str) -> list[FactExtraction]:
+def extract_facts(document_text: str, filename: str) -> Generator[list[FactExtraction], None, None]:
     """
     Extract structured facts from document text using Groq.
 
@@ -122,8 +123,6 @@ def extract_facts(document_text: str, filename: str) -> list[FactExtraction]:
         RuntimeError: If the API call fails or response is unparseable.
     """
     client = _get_client()
-    all_facts: list[FactExtraction] = []
-
     chunks = _chunk_text(document_text)
     logger.info(
         "Processing '%s' in %d chunk(s) via Groq (%s)",
@@ -152,7 +151,7 @@ def extract_facts(document_text: str, filename: str) -> list[FactExtraction]:
             )
         except Exception as e:
             logger.error("Groq API error during fact extraction (chunk %d): %s", i + 1, e)
-            raise RuntimeError(f"Groq API call failed: {e}") from e
+            continue  # Skip this chunk and move to the next to avoid crashing the whole document
 
         # Parse the structured response
         raw_text = response.choices[0].message.content
@@ -160,24 +159,12 @@ def extract_facts(document_text: str, filename: str) -> list[FactExtraction]:
             logger.warning("Empty response from Groq for chunk %d", i + 1)
             continue
 
-        try:
-            raw = json.loads(raw_text)
-            result = FactExtractionResponse(**raw)
-            all_facts.extend(result.facts)
-            logger.info(
-                "Extracted %d facts from chunk %d of '%s'",
-                len(result.facts), i + 1, filename,
-            )
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.error("Failed to parse Groq response (chunk %d): %s", i + 1, e)
-            logger.debug("Raw response: %s", raw_text[:500])
-            # Continue with other chunks instead of failing entirely
-            continue
+
 
         try:
             raw = json.loads(raw_text)
             result = FactExtractionResponse(**raw)
-            all_facts.extend(result.facts)
+            yield result.facts
             logger.info(
                 "Extracted %d facts from chunk %d of '%s'",
                 len(result.facts), i + 1, filename,
@@ -192,5 +179,3 @@ def extract_facts(document_text: str, filename: str) -> list[FactExtraction]:
             logger.info("Pausing for 60 seconds to respect Groq rate limits...")
             time.sleep(60)
 
-    logger.info("Total: extracted %d facts from '%s'", len(all_facts), filename)
-    return all_facts

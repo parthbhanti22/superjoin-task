@@ -108,13 +108,145 @@ def list_documents(db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 # Process a document (extract facts)
 # ---------------------------------------------------------------------------
-@router.post("/{document_id}/process", response_model=ProcessingStatus)
-def process_document(document_id: str, db: Session = Depends(get_db)):
-    """
-    Trigger fact extraction on an uploaded document.
 
-    This is a synchronous endpoint — it blocks until extraction is complete.
-    For production, this would be an async job queue.
+from fastapi import BackgroundTasks
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from database import engine
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def _process_document_bg(document_id: str, filepath: Path, filename: str):
+    """Background task to extract facts chunk by chunk and commit them."""
+    db = SessionLocal()
+    try:
+        doc = db.query(Document).filter(Document.id == document_id).first()
+        if not doc:
+            return
+
+        # Step 1: Extract text
+        logger.info("Parsing PDF: %s", filepath.name)
+        parsed = extract_text_from_pdf(filepath)
+        doc.page_count = parsed.page_count
+        db.commit()
+
+        # Step 2: Build text context
+        context_text = build_extraction_context(parsed)
+
+        # Step 3: Stream from Groq
+        logger.info("Extracting facts via Groq for: %s", doc.filename)
+        fact_generator = extract_facts(context_text, doc.filename)
+
+        total_extracted = 0
+        for chunk_facts in fact_generator:
+            if not chunk_facts:
+                continue
+            
+            for ef in chunk_facts:
+                fact = Fact(
+                    document_id=document_id,
+                    claim=ef.claim,
+                    value=ef.value,
+                    unit=ef.unit,
+                    subject=ef.subject,
+                    time_context=ef.time_context,
+                    page_number=ef.page_number,
+                    source_quote=ef.source_quote,
+                    confidence=ef.confidence,
+                )
+                db.add(fact)
+            
+            db.commit()
+            total_extracted += len(chunk_facts)
+            logger.info("Committed %d facts for document %s", len(chunk_facts), filename)
+
+        doc.status = "processed"
+        db.commit()
+        logger.info("Successfully finished processing %s. Total facts: %d", doc.filename, total_extracted)
+
+    except Exception as e:
+        logger.error("Processing failed for %s: %s", filename, e)
+        doc = db.query(Document).filter(Document.id == document_id).first()
+        if doc:
+            doc.status = "error"
+            doc.error_message = str(e)
+            db.commit()
+    finally:
+        db.close()
+
+
+
+from fastapi import BackgroundTasks
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from database import engine
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def _process_document_bg(document_id: str, filepath: Path, filename: str):
+    """Background task to extract facts chunk by chunk and commit them."""
+    db = SessionLocal()
+    try:
+        doc = db.query(Document).filter(Document.id == document_id).first()
+        if not doc:
+            return
+
+        # Step 1: Extract text
+        logger.info("Parsing PDF: %s", filepath.name)
+        parsed = extract_text_from_pdf(filepath)
+        doc.page_count = parsed.page_count
+        db.commit()
+
+        # Step 2: Build text context
+        context_text = build_extraction_context(parsed)
+
+        # Step 3: Stream from Groq
+        logger.info("Extracting facts via Groq for: %s", doc.filename)
+        fact_generator = extract_facts(context_text, doc.filename)
+
+        total_extracted = 0
+        for chunk_facts in fact_generator:
+            if not chunk_facts:
+                continue
+            
+            for ef in chunk_facts:
+                fact = Fact(
+                    document_id=document_id,
+                    claim=ef.claim,
+                    value=ef.value,
+                    unit=ef.unit,
+                    subject=ef.subject,
+                    time_context=ef.time_context,
+                    page_number=ef.page_number,
+                    source_quote=ef.source_quote,
+                    confidence=ef.confidence,
+                )
+                db.add(fact)
+            
+            db.commit()
+            total_extracted += len(chunk_facts)
+            logger.info("Committed %d facts for document %s", len(chunk_facts), filename)
+
+        doc.status = "processed"
+        db.commit()
+        logger.info("Successfully finished processing %s. Total facts: %d", doc.filename, total_extracted)
+
+    except Exception as e:
+        logger.error("Processing failed for %s: %s", filename, e)
+        doc = db.query(Document).filter(Document.id == document_id).first()
+        if doc:
+            doc.status = "error"
+            doc.error_message = str(e)
+            db.commit()
+    finally:
+        db.close()
+
+
+@router.post("/{document_id}/process", response_model=ProcessingStatus)
+def process_document(document_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """
+    Trigger fact extraction on an uploaded document in the background.
+    Returns immediately so the UI can poll for status updates.
     """
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
@@ -132,59 +264,20 @@ def process_document(document_id: str, db: Session = Depends(get_db)):
     # Update status to processing
     doc.status = "processing"
     doc.error_message = None
+    
+    # Step 4: Clear any existing facts (re-processing)
+    db.query(Fact).filter(Fact.document_id == document_id).delete()
     db.commit()
 
-    try:
-        # Step 1: Extract text from PDF
-        logger.info("Parsing PDF: %s", filepath.name)
-        parsed = extract_text_from_pdf(filepath)
-        doc.page_count = parsed.page_count
+    # Queue background task
+    background_tasks.add_task(_process_document_bg, document_id, filepath, doc.filename)
 
-        # Step 2: Build text context for LLM
-        context_text = build_extraction_context(parsed)
-
-        # Step 3: Send to Groq for fact extraction
-        logger.info("Extracting facts via Groq for: %s", doc.filename)
-        extracted_facts = extract_facts(context_text, doc.filename)
-
-        # Step 4: Clear any existing facts (re-processing)
-        db.query(Fact).filter(Fact.document_id == document_id).delete()
-
-        # Step 5: Store extracted facts
-        for ef in extracted_facts:
-            fact = Fact(
-                document_id=document_id,
-                claim=ef.claim,
-                value=ef.value,
-                unit=ef.unit,
-                subject=ef.subject,
-                time_context=ef.time_context,
-                page_number=ef.page_number,
-                source_quote=ef.source_quote,
-                confidence=ef.confidence,
-            )
-            db.add(fact)
-
-        doc.status = "processed"
-        db.commit()
-
-        fact_count = db.query(Fact).filter(Fact.document_id == document_id).count()
-        logger.info("Successfully extracted %d facts from %s", fact_count, doc.filename)
-
-        return ProcessingStatus(
-            document_id=document_id,
-            status="processed",
-            message=f"Successfully extracted {fact_count} facts",
-            fact_count=fact_count,
-        )
-
-    except Exception as e:
-        logger.error("Processing failed for %s: %s", doc.filename, e)
-        doc.status = "error"
-        doc.error_message = str(e)
-        db.commit()
-        raise HTTPException(status_code=500, detail=f"Processing failed: {e}")
-
+    return ProcessingStatus(
+        document_id=document_id,
+        status="processing",
+        message="Fact extraction started in background",
+        fact_count=0,
+    )
 
 # ---------------------------------------------------------------------------
 # Delete a document
