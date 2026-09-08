@@ -1,0 +1,469 @@
+/* =========================================================================
+   FACT KNOWLEDGE LAYER — Funky Early-2000s Web Revival Theme
+   Inspired by early Google, GeoCities, and the wild web of 1998-2003
+   ========================================================================= */
+
+/* ---------------------------------------------------------------------------
+   CSS Variables — Retro Web Color Palette
+   --------------------------------------------------------------------------- */
+:root {
+  /* Backgrounds — classic off-white and pale tones */
+  --bg-primary: #fffffc;
+  --bg-secondary: #f0f0e8;
+  --bg-tertiary: #e8e8d8;
+  --bg-glass: rgba(255, 255, 252, 0.85);
+  --bg-glass-hover: rgba(245, 245, 235, 0.95);
+
+  /* Text */
+  --text-primary: #1a1a2e;
+  --text-secondary: #333366;
+  --text-tertiary: #666699;
+
+  /* Borders */
+  --border-subtle: #9999cc;
+  --border-hover: #6666aa;
+
+  /* Funky retro accent colors — bright like the 2000s web */
+  --accent-blue: #3366cc;
+  --accent-blue-dim: rgba(51, 102, 204, 0.12);
+  --accent-purple: #9933cc;
+  --accent-purple-dim: rgba(153, 51, 204, 0.10);
+  --accent-red: #cc3333;
+  --accent-green: #339933;
+  --accent-yellow: #ffcc00;
+  --accent-orange: #ff6600;
+  --accent-hot-pink: #ff0099;
+  --accent-cyan: #00cccc;
+
+  /* Relationship colors */
+  --color-corroboration: #339933;
+  --color-corroboration-dim: rgba(51, 153, 51, 0.12);
+  --color-contradiction: #cc3333;
+  --color-contradiction-dim: rgba(204, 51, 51, 0.12);
+  --color-contextual: #ff6600;
+  --color-contextual-dim: rgba(255, 102, 0, 0.12);
+  --color-failure: #996633;
+  --color-failure-dim: rgba(153, 102, 51, 0.12);
+
+  /* Status colors */
+  --color-uploaded: #3366cc;
+  --color-processing: #ff6600;
+  --color-processed: #339933;
+  --color-error: #cc3333;
+
+  /* Shadows */
+  --shadow-glow: 0 0 0 1px rgba(51, 102, 204, 0.3), 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  /* Radii — boxy like the old web */
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Font — system fonts that feel retro */
+  --font-sans: "Trebuchet MS", "Comic Sans MS", "Verdana", "Arial", sans-serif;
+  --font-mono: "Courier New", "Lucida Console", monospace;
+  --font-display: "Impact", "Arial Black", "Trebuchet MS", sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+   Tailwind v4 Theme Integration
+   --------------------------------------------------------------------------- */
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+/* ---------------------------------------------------------------------------
+   Base Styles
+   --------------------------------------------------------------------------- */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: auto;
+  /* Classic tiled background pattern — subtle grid */
+  background-image:
+    linear-gradient(rgba(153, 153, 204, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(153, 153, 204, 0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Rainbow top border — the classic geocities touch */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  z-index: 9999;
+  background: linear-gradient(
+    90deg,
+    #cc3333, #ff6600, #ffcc00, #339933, #3366cc, #9933cc, #ff0099
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   Scrollbar
+   --------------------------------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 14px;
+}
+::-webkit-scrollbar-track {
+  background: #e8e8d8;
+}
+::-webkit-scrollbar-thumb {
+  background: #9999cc;
+  border: 2px solid #e8e8d8;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6666aa;
+}
+
+/* ---------------------------------------------------------------------------
+   Glass Card → Retro Card (beveled border, classic web panel)
+   --------------------------------------------------------------------------- */
+.glass-card {
+  background: var(--bg-glass);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.7),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.05),
+    2px 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.15s ease;
+}
+.glass-card:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-hover);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.7),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.05),
+    3px 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ---------------------------------------------------------------------------
+   Animations — kept subtle but with a retro bounce
+   --------------------------------------------------------------------------- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(-100%); }
+}
+
+@keyframes rainbow {
+  0%   { color: #cc3333; }
+  16%  { color: #ff6600; }
+  33%  { color: #ffcc00; }
+  50%  { color: #339933; }
+  66%  { color: #3366cc; }
+  83%  { color: #9933cc; }
+  100% { color: #cc3333; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease forwards;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 1.5s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 2s linear infinite;
+}
+
+.animate-rainbow {
+  animation: rainbow 3s linear infinite;
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Skeleton shimmer for loading states */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 0%,
+    var(--bg-glass-hover) 50%,
+    var(--bg-tertiary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   Buttons — Chunky retro web buttons
+   --------------------------------------------------------------------------- */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  border: 2px outset #5577dd;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  background: linear-gradient(180deg, #6699ff, #3366cc);
+  color: white;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+}
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #7799ff, #4477dd);
+}
+.btn-primary:active:not(:disabled) {
+  border-style: inset;
+  transform: translateY(1px);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  border: 2px outset #aaaacc;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  background: linear-gradient(180deg, #f0f0e8, #d8d8cc);
+  color: var(--text-primary);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f8f8f0, #e0e0d4);
+}
+.btn-secondary:active:not(:disabled) {
+  border-style: inset;
+}
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  border: 2px outset #cc6666;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  background: linear-gradient(180deg, #ee8888, #cc3333);
+  color: white;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+}
+.btn-danger:hover {
+  background: linear-gradient(180deg, #ff9999, #dd4444);
+}
+.btn-danger:active {
+  border-style: inset;
+}
+
+/* ---------------------------------------------------------------------------
+   Badge / Pill — Retro label
+   --------------------------------------------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid currentColor;
+}
+
+/* ---------------------------------------------------------------------------
+   Drop Zone
+   --------------------------------------------------------------------------- */
+.drop-zone {
+  border: 3px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 40px 24px;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(153, 153, 204, 0.03) 10px,
+    rgba(153, 153, 204, 0.03) 20px
+  );
+}
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+}
+
+/* ---------------------------------------------------------------------------
+   Source quote highlight
+   --------------------------------------------------------------------------- */
+.source-quote {
+  padding: 10px 14px;
+  border-left: 4px solid var(--accent-purple);
+  background: var(--accent-purple-dim);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------------------
+   Table styles — Classic HTML table with cell borders
+   --------------------------------------------------------------------------- */
+.facts-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 2px solid var(--border-subtle);
+}
+.facts-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: white;
+  background: linear-gradient(180deg, #6666aa, #333366);
+  border: 1px solid #333366;
+}
+.facts-table td {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border: 1px solid #ccccbb;
+  vertical-align: top;
+}
+.facts-table tr:nth-child(even) td {
+  background: rgba(153, 153, 204, 0.06);
+}
+.facts-table tr:hover td {
+  background: var(--accent-blue-dim);
+  color: var(--text-primary);
+}
+
+/* ---------------------------------------------------------------------------
+   Stagger animation helper
+   --------------------------------------------------------------------------- */
+.stagger > * {
+  opacity: 0;
+  animation: fadeIn 0.3s ease forwards;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger > *:nth-child(4) { animation-delay: 0.20s; }
+.stagger > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger > *:nth-child(6) { animation-delay: 0.30s; }
+.stagger > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger > *:nth-child(8) { animation-delay: 0.40s; }
+.stagger > *:nth-child(n+9) { animation-delay: 0.45s; }
+
+/* ---------------------------------------------------------------------------
+   Retro hit counter & visitor badge styles (used in footer)
+   --------------------------------------------------------------------------- */
+.retro-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: #339933;
+  background: #1a1a2e;
+  padding: 3px 8px;
+  border: 2px inset #666;
+  border-radius: 2px;
+}
+
+.retro-marquee {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.retro-marquee span {
+  display: inline-block;
+  animation: marquee 15s linear infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   Horizontal rule — the classic <hr> with stars
+   --------------------------------------------------------------------------- */
+.retro-hr {
+  border: none;
+  text-align: center;
+  margin: 16px 0;
+  font-size: 11px;
+  color: var(--border-subtle);
+  letter-spacing: 4px;
+}
+.retro-hr::before {
+  content: "★ ★ ★ ★ ★ ★ ★";
+}
