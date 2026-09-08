@@ -15,7 +15,7 @@ A full-stack system that ingests PDF documents, extracts semantically grounded f
 ### 1. Clone & Enter the Project
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/parthbhanti22/superjoin-task
 cd superjoin-fact-layer
 ```
 
